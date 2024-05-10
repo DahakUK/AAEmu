@@ -180,7 +180,75 @@ public class ItemManager : Singleton<ItemManager>
 
         // Check all people in the aggro list, and use the highest stat
         // TODO: Only consider players in the party/raid with a claim on the NPC
-        if (!unit.AggroTable.IsEmpty)
+
+        HashSet<Character> eligiblePlayers = new HashSet<Character>();
+        if (unit.CharacterTagging.TagTeam != null && unit.CharacterTagging.TagTeam != 0)
+        {
+           
+                //A team has tagging rights
+                var team = TeamManager.Instance.GetActiveTeam(unit.CharacterTagging.TagTeam);
+            if (team != null)
+            {
+                foreach (var member in team.Members)
+                {
+                    if (member != null && member.Character != null)
+                    {
+                        if (member.Character is Character tm)
+                        {
+                            var distance = tm.Transform.World.Position - unit.Transform.World.Position;
+                            if (distance.Length() <= 200)
+                            {
+                                eligiblePlayers.Add(tm);
+                            }
+                        }
+                    }
+                }
+            }
+            else if (unit.CharacterTagging.Tagger != null)
+            {
+                //A player has tag rights
+                eligiblePlayers.Add(unit.CharacterTagging.Tagger);
+            }
+
+        }
+        else if (unit.CharacterTagging.Tagger != null)
+        {
+            //A player has tag rights
+            eligiblePlayers.Add(unit.CharacterTagging.Tagger);
+        }
+        if (eligiblePlayers.Count > 0)
+        {
+            var maxDropRateMul = -100f;
+            var maxLootGoldMul = -100f;
+
+            foreach (var pl in eligiblePlayers)
+            {
+
+                var aggroDropMul = (100f + pl.DropRateMul) / 100f;
+                var aggroGoldMul = (100f + pl.LootGoldMul) / 100f;
+                if (aggroDropMul > maxDropRateMul)
+                    maxDropRateMul = aggroDropMul;
+                if (aggroGoldMul > maxLootGoldMul)
+                    maxLootGoldMul = aggroGoldMul;
+
+
+
+            }
+
+            lootDropRate = maxDropRateMul;
+            lootGoldRate = maxLootGoldMul;
+
+
+
+        }
+        else if (killer is Character player)
+        {
+            lootDropRate *= (100f + player.DropRateMul) / 100f;
+            lootGoldRate *= (100f + player.LootGoldMul) / 100f;
+            Logger.Info($"Unit killed without aggro: {unit.ObjId} ({unit.TemplateId}) by {player.Name}");
+        }
+        //Old code to save for now:
+        /*      if (!unit.AggroTable.IsEmpty)
         {
             var maxDropRateMul = -100f;
             var maxLootGoldMul = -100f;
@@ -207,6 +275,7 @@ public class ItemManager : Singleton<ItemManager>
                     if (aggroGoldMul > maxLootGoldMul)
                         maxLootGoldMul = aggroGoldMul;
                     validAggroCount++;
+                   
                 }
             }
 
@@ -223,8 +292,7 @@ public class ItemManager : Singleton<ItemManager>
             lootDropRate *= (100f + player.DropRateMul) / 100f;
             lootGoldRate *= (100f + player.LootGoldMul) / 100f;
             Logger.Info($"Unit killed without aggro: {unit.ObjId} ({unit.TemplateId}) by {player.Name}");
-        }
-
+        }*/
         // Base ID used for identifying the loot
         var baseId = ((ulong)unit.ObjId << 32) + 65536;
 
@@ -1627,7 +1695,7 @@ public class ItemManager : Singleton<ItemManager>
             }
         }
 
-        // Update dirty items
+
         using (var command = connection.CreateCommand())
         {
             command.Connection = connection;
@@ -1645,8 +1713,24 @@ public class ItemManager : Singleton<ItemManager>
                     if (item.SlotType == SlotType.None)
                     {
                         // Only give a error if it has no owner, otherwise it's likely a BuyBack item
-                        if (item.OwnerId <= 0)
-                            Logger.Warn(string.Format("Found SlotType.None in itemslist, skipping ID:{0} - Template:{1}", item.Id, item.TemplateId));
+
+                        //Debug to get slot by data
+
+                        if (item._holdingContainer != null)
+                        {
+                            item.SlotType = getContainerSlotTypeByContainerID(item._holdingContainer.ContainerId);
+                        }
+
+                        Logger.Warn($"Slot type for {item.Id}  was None, changing to {item.SlotType}");
+
+                        if (item.SlotType == SlotType.None && item.OwnerId <= 0)
+                        {
+                            continue;
+                        }
+                    }
+                    if (!Enum.IsDefined(typeof(SlotType), item.SlotType))
+                    {
+                        Logger.Warn($"Found SlotType.{item.SlotType} in itemslist, skipping ID:{item.Id} - Template:{item.TemplateId}");
                         continue;
                     }
 
@@ -1688,14 +1772,24 @@ public class ItemManager : Singleton<ItemManager>
                     command.Parameters.AddWithValue("@charge_time", item.ChargeStartTime);
                     command.Parameters.AddWithValue("@charge_count", item.ChargeCount);
 
-                    if (command.ExecuteNonQuery() < 1)
+                    try
                     {
-                        Logger.Error($"Error updating items {item.Id} ({item.TemplateId}) !");
+                        if (command.ExecuteNonQuery() < 1)
+                        {
+                            Logger.Error($"Error updating items {item.Id} ({item.TemplateId}) !");
+                        }
+                        else
+                        {
+                            item.IsDirty = false;
+                            updateCount++;
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        item.IsDirty = false;
-                        updateCount++;
+                        // Create a manual SQL string with the data provided
+                        var sqlString = $"REPLACE INTO items (id, type, template_id, container_id, slot_type, slot, count, details, lifespan_mins, made_unit_id, unsecure_time, unpack_time, owner, created_at, grade, flags, ucc, expire_time, expire_online_minutes, charge_time, charge_count) VALUES ({item.Id}, {item.GetType().ToString()}, {item.TemplateId}, {item._holdingContainer?.ContainerId ?? 0}, {item.SlotType.ToString()}, {item.Slot}, {item.Count}, {details.GetBytes()}, {item.LifespanMins}, {item.MadeUnitId}, {item.UnsecureTime}, {item.UnpackTime}, {item.CreateTime}, {item.OwnerId}, {item.Grade}, {(byte)item.ItemFlags}, {item.UccId}, {item.ExpirationTime}, {item.ExpirationOnlineMinutesLeft}, {item.ChargeStartTime}, {item.ChargeCount})";
+
+                        Logger.Error($"Error: {ex.Message}\nSQL Query: {sqlString}\n");
                     }
                     command.Parameters.Clear();
                 }
@@ -1704,6 +1798,19 @@ public class ItemManager : Singleton<ItemManager>
 
         return (updateCount, deleteCount, containerUpdateCount);
     }
+
+    public SlotType getContainerSlotTypeByContainerID(ulong dbId)
+    {
+        _allPersistantContainers.TryGetValue(dbId, out var container);
+
+        if (container != null)
+        {
+            return container.ContainerType;
+        }
+
+        return SlotType.None;
+    }
+
 
     public ItemContainer GetItemContainerForCharacter(uint characterId, SlotType slotType, uint mateId = 0)
     {

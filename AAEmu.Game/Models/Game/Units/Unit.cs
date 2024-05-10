@@ -447,10 +447,62 @@ public class Unit : BaseUnit, IUnit
         }
 
         var lootDropItems = ItemManager.Instance.CreateLootDropItems(ObjId, killer);
+        // Without moving the tagging into the root of unit, we need to do some work for loot distribution:
         if (lootDropItems.Count > 0)
         {
-            killer.BroadcastPacket(new SCLootableStatePacket(ObjId, true), true);
+            Logger.Info($"Loot item count is {lootDropItems.Count}");
+            var unit = WorldManager.Instance.GetNpc(ObjId);
+            if (unit == null)
+            {
+                //Defaulting to the original code if this isn't an NPC
+                Logger.Info($"Not an NPC for {ObjId}");
+
+                killer.BroadcastPacket(new SCLootableStatePacket(ObjId, true), true);
+
+            }
+            else
+            {
+                //it's an NPC, and we have a thing for this!
+                HashSet<Character> eligiblePlayers = new HashSet<Character>();
+                if (unit.CharacterTagging.TagTeam != null&& unit.CharacterTagging.TagTeam != 0)
+                {
+                    //A team has tagging rights
+                    var nextEligibleLooter = TeamManager.Instance.getNextEligibleLooter(unit.CharacterTagging.TagTeam, unit);
+                    if (nextEligibleLooter != null)
+                    {
+                        eligiblePlayers.Add(nextEligibleLooter);
+                        Logger.Warn($"Eligible team, adding {nextEligibleLooter}");
+                    }
+                    else
+                    {
+                        Logger.Warn("Next eligible looter was null");
+                    }
+                }
+                else if (unit.CharacterTagging.Tagger != null)
+                {
+                    //A player has tag rights
+                    eligiblePlayers.Add(unit.CharacterTagging.Tagger);
+                    Logger.Warn($"Added tagger {unit.CharacterTagging.Tagger}");
+                }
+                if (eligiblePlayers.Count > 0)
+                {
+                    foreach (var eligible in eligiblePlayers)
+                    {
+                        if (eligible != null)
+                        {
+                            eligible.BroadcastPacket(new SCLootableStatePacket(ObjId, true), true);
+                        }
+                        else
+                        {
+                            Logger.Warn($"Eligible player was null, eligible player count was {eligiblePlayers.Count}");
+                        }
+                    }
+                }
+            }
+
         }
+
+
 
         if (CurrentTarget != null)
         {

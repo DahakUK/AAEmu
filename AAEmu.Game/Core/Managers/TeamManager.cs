@@ -54,7 +54,7 @@ public class TeamManager : Singleton<TeamManager>
         return null;
     }
 
-    private Team GetActiveTeam(uint teamId)
+    public Team GetActiveTeam(uint teamId)
     {
         if (teamId == 0) return null;
         return _activeTeams.TryGetValue(teamId, out var team) ? team : null;
@@ -207,6 +207,42 @@ public class TeamManager : Singleton<TeamManager>
                 ChatManager.Instance.GetPartyChat(activeTeam, t2).JoinChannel(t2);
         }
     }
+
+    public Character getNextEligibleLooter(uint teamId, Unit owner)
+    {
+        var activeTeam = GetActiveTeam(teamId);
+        if (activeTeam == null) return null;
+
+        foreach (var member in activeTeam.Members)
+        {
+           
+
+            if (member?.Character == null || member.hasGoneRoundRobin)
+                continue;
+            //Need to check if player is in range, and skip if not.
+            var distance = member.Character.Transform.World.Position - owner.Transform.World.Position;
+            if (distance.Length() <= 200)
+                continue;
+
+            member.hasGoneRoundRobin = true;
+            return member.Character;
+        }
+
+        // Reset round robin and get the first eligible member
+        Character returnMember = null;
+        foreach (var member in activeTeam.Members)
+        {
+            if (member?.Character == null)
+                continue;
+
+            member.hasGoneRoundRobin = returnMember == null;
+            if (returnMember == null)
+                returnMember = member.Character;
+        }
+
+        return returnMember;
+    }
+
 
     public void CreateNewTeam(InvitationTemplate activeInvitation)
     {

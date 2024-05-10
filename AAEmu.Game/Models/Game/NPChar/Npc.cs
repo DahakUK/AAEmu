@@ -17,6 +17,7 @@ using AAEmu.Game.Models.Game.Items;
 using AAEmu.Game.Models.Game.Models;
 using AAEmu.Game.Models.Game.Skills;
 using AAEmu.Game.Models.Game.Skills.SkillControllers;
+using AAEmu.Game.Models.Game.Team;
 using AAEmu.Game.Models.Game.Units;
 using AAEmu.Game.Models.Game.Units.Movements;
 using AAEmu.Game.Models.Game.Units.Static;
@@ -43,6 +44,9 @@ public class Npc : Unit
     public ConcurrentDictionary<uint, Aggro> AggroTable { get; }
     public uint CurrentAggroTarget { get; set; }
     public bool CanFly { get; set; } // TODO mark Npc's that can fly so that they don't land on the ground when calculating the Z height
+    //Tagging works differently to Aggro.:
+    public Tagging CharacterTagging { get; set; }
+
 
     public override float BaseMoveSpeed
     {
@@ -756,27 +760,123 @@ public class Npc : Unit
     {
         Name = "";
         AggroTable = new ConcurrentDictionary<uint, Aggro>();
+        CharacterTagging = new Tagging(this);//Adding because Tagging works differently than Aggro
         //Equip = new Item[28];
     }
 
     public override void DoDie(BaseUnit killer, KillReason killReason)
     {
-        base.DoDie(killer, killReason);
-        AggroTable.Clear();
-        if (killer is Character character)
+
+        HashSet<Character> eligiblePlayers = new HashSet<Character>();
+        if (CharacterTagging.TagTeam != null&& CharacterTagging.TagTeam != 0)
         {
-            character.AddExp(KillExp, true);
-            var mate = MateManager.Instance.GetActiveMate(character.ObjId);
+            //A team has tagging rights
+            var team = TeamManager.Instance.GetActiveTeam(CharacterTagging.TagTeam);
+            if (team != null)
+            {
+                //Just to check the team is still a valid team.
+                foreach (var member in team.Members)
+                {
+                    if (member != null && member.Character != null)
+                    {
+                        if (member.Character is Character tm)
+                        {
+                            var distance = tm.Transform.World.Position - this.Transform.World.Position;
+                            if (distance.Length() <= 200)
+                            {
+                                eligiblePlayers.Add(tm);
+                            }
+                        }
+                    }
+                }
+            }
+            else if (CharacterTagging.Tagger != null)
+            {
+                //A player has tag rights, but the team is not valid.
+                eligiblePlayers.Add(CharacterTagging.Tagger);
+            }
+        }
+        else if (CharacterTagging.Tagger != null)
+        {
+            //A player has tag rights
+            eligiblePlayers.Add(CharacterTagging.Tagger);
+        }
+        else
+        {
+            //default to old system, commented out for testing
+            /*  foreach (var aggroInfo in AggroTable)
+        {
+            // Ignore stats from people more than 200m away. 
+            var distance = aggroInfo.Value.Owner.Transform.World.Position - this.Transform.World.Position;
+            if (distance.Length() > 200)
+                continue;
+
+            // If a pet is on there, use it's owner
+            var checkUnit = aggroInfo.Value.Owner;
+            if (checkUnit is Units.Mate pm)
+                checkUnit = WorldManager.Instance.GetCharacterByObjId(pm.OwnerObjId) ?? aggroInfo.Value.Owner;
+
+            // Get player loot stats
+            if (checkUnit is Character pl)
+            {
+                if (pl.InParty)
+                {
+                    var members = TeamManager.Instance.GetTeamByObjId(pl.ObjId);
+                    
+                       
+                            foreach (var member in members.Members)
+                    {
+                        if (member != null && member.Character!=null)
+                        {
+                            if (member.Character is Character tm)
+                            {
+                                distance = tm.Transform.World.Position - this.Transform.World.Position;
+                                if (distance.Length() <= 200)
+                                {
+                                    eligiblePlayers.Add(tm);
+                                }
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    eligiblePlayers.Add(pl);
+                }
+             
+                var mate = MateManager.Instance.GetActiveMate(pl.ObjId);
+                if (mate != null)
+                {
+                    mate.AddExp(KillExp);
+                    pl.SendMessage($"Pet gained {KillExp} XP");
+                }
+               
+            }
+        }*/
+        }
+
+
+
+
+        foreach (Character pl in eligiblePlayers)
+        {
+            pl.AddExp(KillExp, true);
+            var mate = MateManager.Instance.GetActiveMate(pl.ObjId);
             if (mate != null)
             {
                 mate.AddExp(KillExp);
-                character.SendMessage($"Pet gained {KillExp} XP");
+                pl.SendMessage($"Pet gained {KillExp} XP");
             }
             //character.Quests.OnKill(this);
             // инициируем событие
             //Task.Run(() => QuestManager.Instance.DoOnMonsterHuntEvents(character, this));
-            QuestManager.Instance.DoOnMonsterHuntEvents(character, this);
+            QuestManager.Instance.DoOnMonsterHuntEvents(pl, this);
         }
+
+        base.DoDie(killer, killReason);
+        AggroTable.Clear();
+        CharacterTagging.ClearAllTaggers();
+
 
         Spawner?.DecreaseCount(this);
         Ai?.GoToDead();
@@ -821,6 +921,11 @@ public class Npc : Unit
             ClearAggroOfUnit(unit);
             return;
         }
+
+        //Add Tagging if it was damage aggro
+        if (kind == AggroKind.Damage)
+            CharacterTagging.AddTagger(unit, amount);
+
 
         amount = (int)(amount * (unit.AggroMul / 100.0f));
         amount = (int)(amount * (IncomingAggroMul / 100.0f));
@@ -883,6 +988,9 @@ public class Npc : Unit
             CheckIfEmptyAggroToReturn(unit);
     }
 
+    //Tagging!
+
+
     private static void CheckIfEmptyAggroToReturn(IBaseUnit unit)
     {
         if (unit is not Npc npc)
@@ -920,6 +1028,9 @@ public class Npc : Unit
 
     public void ClearAllAggro()
     {
+        ///Adding for tagging
+        CharacterTagging.ClearAllTaggers();
+
         foreach (var table in AggroTable)
         {
             var unit = WorldManager.Instance.GetUnit(table.Key);
