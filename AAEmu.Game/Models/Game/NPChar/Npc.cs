@@ -801,11 +801,12 @@ public class Npc : Unit
             //A player has tag rights
             eligiblePlayers.Add(CharacterTagging.Tagger);
         }
-        
 
 
 
-        var xpDiv = eligiblePlayers.Count;
+
+        var xpDiv = eligiblePlayers.Count == 0 ? 1 : eligiblePlayers.Count;
+
         var plkillExp = KillExp / xpDiv;
         foreach (Character pl in eligiblePlayers)
         {
