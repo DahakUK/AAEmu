@@ -801,59 +801,7 @@ public class Npc : Unit
             //A player has tag rights
             eligiblePlayers.Add(CharacterTagging.Tagger);
         }
-        else
-        {
-            //default to old system, commented out for testing
-            /*  foreach (var aggroInfo in AggroTable)
-        {
-            // Ignore stats from people more than 200m away. 
-            var distance = aggroInfo.Value.Owner.Transform.World.Position - this.Transform.World.Position;
-            if (distance.Length() > 200)
-                continue;
-
-            // If a pet is on there, use it's owner
-            var checkUnit = aggroInfo.Value.Owner;
-            if (checkUnit is Units.Mate pm)
-                checkUnit = WorldManager.Instance.GetCharacterByObjId(pm.OwnerObjId) ?? aggroInfo.Value.Owner;
-
-            // Get player loot stats
-            if (checkUnit is Character pl)
-            {
-                if (pl.InParty)
-                {
-                    var members = TeamManager.Instance.GetTeamByObjId(pl.ObjId);
-                    
-                       
-                            foreach (var member in members.Members)
-                    {
-                        if (member != null && member.Character!=null)
-                        {
-                            if (member.Character is Character tm)
-                            {
-                                distance = tm.Transform.World.Position - this.Transform.World.Position;
-                                if (distance.Length() <= 200)
-                                {
-                                    eligiblePlayers.Add(tm);
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    eligiblePlayers.Add(pl);
-                }
-             
-                var mate = MateManager.Instance.GetActiveMate(pl.ObjId);
-                if (mate != null)
-                {
-                    mate.AddExp(KillExp);
-                    pl.SendMessage($"Pet gained {KillExp} XP");
-                }
-               
-            }
-        }*/
-        }
+        
 
 
 

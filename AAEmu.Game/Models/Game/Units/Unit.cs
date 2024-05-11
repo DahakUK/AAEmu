@@ -450,12 +450,12 @@ public class Unit : BaseUnit, IUnit
         // Without moving the tagging into the root of unit, we need to do some work for loot distribution:
         if (lootDropItems.Count > 0)
         {
-            Logger.Info($"Loot item count is {lootDropItems.Count}");
+           // Logger.Info($"Loot item count is {lootDropItems.Count}");
             var unit = WorldManager.Instance.GetNpc(ObjId);
             if (unit == null)
             {
                 //Defaulting to the original code if this isn't an NPC
-                Logger.Info($"Not an NPC for {ObjId}");
+              //  Logger.Info($"Not an NPC for {ObjId}");
 
                 killer.BroadcastPacket(new SCLootableStatePacket(ObjId, true), true);
 

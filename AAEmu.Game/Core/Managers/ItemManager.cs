@@ -176,10 +176,8 @@ public class ItemManager : Singleton<ItemManager>
         // Calculate loot rates
         var lootDropRate = 1f;
         var lootGoldRate = 1f;
-        var validAggroCount = 0;
 
-        // Check all people in the aggro list, and use the highest stat
-        // TODO: Only consider players in the party/raid with a claim on the NPC
+        // Check all people with with a claim on the NPC
 
         HashSet<Character> eligiblePlayers = new HashSet<Character>();
         if (unit.CharacterTagging.TagTeam != null && unit.CharacterTagging.TagTeam != 0)
@@ -198,6 +196,7 @@ public class ItemManager : Singleton<ItemManager>
                             var distance = tm.Transform.World.Position - unit.Transform.World.Position;
                             if (distance.Length() <= 200)
                             {
+                                //This player is in range of the mob and in a group with tagging rights.
                                 eligiblePlayers.Add(tm);
                             }
                         }
@@ -247,52 +246,7 @@ public class ItemManager : Singleton<ItemManager>
             lootGoldRate *= (100f + player.LootGoldMul) / 100f;
             Logger.Info($"Unit killed without aggro: {unit.ObjId} ({unit.TemplateId}) by {player.Name}");
         }
-        //Old code to save for now:
-        /*      if (!unit.AggroTable.IsEmpty)
-        {
-            var maxDropRateMul = -100f;
-            var maxLootGoldMul = -100f;
-
-            foreach (var aggroInfo in unit.AggroTable)
-            {
-                // Ingnore stats from people more than 200m away. 
-                var distance = aggroInfo.Value.Owner.Transform.World.Position - unit.Transform.World.Position;
-                if (distance.Length() > 200)
-                    continue;
-
-                // If a pet is on there, use it's owner
-                var checkUnit = aggroInfo.Value.Owner;
-                if (checkUnit is Mate mate)
-                    checkUnit = WorldManager.Instance.GetCharacterByObjId(mate.OwnerObjId) ?? aggroInfo.Value.Owner;
-
-                // Get player loot stats
-                if (checkUnit is Character pl)
-                {
-                    var aggroDropMul = (100f + pl.DropRateMul) / 100f;
-                    var aggroGoldMul = (100f + pl.LootGoldMul) / 100f;
-                    if (aggroDropMul > maxDropRateMul)
-                        maxDropRateMul = aggroDropMul;
-                    if (aggroGoldMul > maxLootGoldMul)
-                        maxLootGoldMul = aggroGoldMul;
-                    validAggroCount++;
-                   
-                }
-            }
-
-            if (validAggroCount > 0)
-            {
-                lootDropRate = maxDropRateMul;
-                lootGoldRate = maxLootGoldMul;
-            }
-        }
-
-        // Fallback to killer's stats if aggro list failed
-        if ((validAggroCount <= 0) && (killer is Character player))
-        {
-            lootDropRate *= (100f + player.DropRateMul) / 100f;
-            lootGoldRate *= (100f + player.LootGoldMul) / 100f;
-            Logger.Info($"Unit killed without aggro: {unit.ObjId} ({unit.TemplateId}) by {player.Name}");
-        }*/
+      
         // Base ID used for identifying the loot
         var baseId = ((ulong)unit.ObjId << 32) + 65536;
 
@@ -1713,12 +1667,14 @@ public class ItemManager : Singleton<ItemManager>
                     if (item.SlotType == SlotType.None)
                     {
                         // Only give a error if it has no owner, otherwise it's likely a BuyBack item
+                        if (item.OwnerId <= 0)
+                            continue;
 
                         //Debug to get slot by data
 
                         if (item._holdingContainer != null)
                         {
-                            item.SlotType = getContainerSlotTypeByContainerID(item._holdingContainer.ContainerId);
+                            item.SlotType = GetContainerSlotTypeByContainerID(item._holdingContainer.ContainerId);
                         }
 
                         Logger.Warn($"Slot type for {item.Id}  was None, changing to {item.SlotType}");
@@ -1799,7 +1755,7 @@ public class ItemManager : Singleton<ItemManager>
         return (updateCount, deleteCount, containerUpdateCount);
     }
 
-    public SlotType getContainerSlotTypeByContainerID(ulong dbId)
+    public SlotType GetContainerSlotTypeByContainerID(ulong dbId)
     {
         _allPersistantContainers.TryGetValue(dbId, out var container);
 
