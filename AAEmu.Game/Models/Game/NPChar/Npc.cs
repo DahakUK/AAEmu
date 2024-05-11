@@ -766,7 +766,7 @@ public class Npc : Unit
 
     public override void DoDie(BaseUnit killer, KillReason killReason)
     {
-
+       
         HashSet<Character> eligiblePlayers = new HashSet<Character>();
         if (CharacterTagging.TagTeam != 0)
         {
@@ -805,24 +805,122 @@ public class Npc : Unit
 
 
 
-        var xpDiv = eligiblePlayers.Count == 0 ? 1 : eligiblePlayers.Count;
-
-        var plkillExp = KillExp / xpDiv;
-        foreach (Character pl in eligiblePlayers)
+      
+        if (eligiblePlayers.Count == 0 && killer is Character characterKiller)
         {
-            pl.AddExp(plkillExp, true);
-            var mate = MateManager.Instance.GetActiveMate(pl.ObjId);
+            QuestManager.Instance.DoOnMonsterHuntEvents(characterKiller, this);//No eligible owner, but the killer is a character.
+            characterKiller.AddExp(KillExp, true);
+            var mate = MateManager.Instance.GetActiveMate(characterKiller.ObjId);
             if (mate != null)
             {
                 mate.AddExp(KillExp);
-                pl.SendMessage($"Pet gained {KillExp} XP");
+                characterKiller.SendMessage($"Pet gained {KillExp} XP");
             }
-            //character.Quests.OnKill(this);
-            // инициируем событие
-            //Task.Run(() => QuestManager.Instance.DoOnMonsterHuntEvents(character, this));
-            QuestManager.Instance.DoOnMonsterHuntEvents(pl, this);
         }
+        else
+        {
+            var isFullTeam = false;
+            var isRaid = false;
+            if (CharacterTagging.TagTeam != 0)
+            {
+                //A team has tagging rights
+                var team = TeamManager.Instance.GetActiveTeam(CharacterTagging.TagTeam);
+                if (team != null)
+                {
+                    if(!team.IsParty)
+                    {
+                        isRaid = true;
+                        //Team is a raid.
+                    }
+                    else if(team.MembersCount()>3)
+                    {
+                        isFullTeam = true;
+                    }
+                }
+            }
+                    foreach (Character pl in eligiblePlayers)
+            {
+                int plKillXP = 0;
+                int mateKillXP = 0;
+               
+                if(isRaid)
+                {
+                    //Player is in a raid. 1.2, pet XP is capped a full team value, but player gets raid XP regardless of how many raiders are present.
+                    plKillXP = (int)(KillExp * 0.33);
+                    mateKillXP = (int)(KillExp * 0.66);
+                }
+                else if (isFullTeam)
+                {
+                    //Player is in a team of more than 3 people. Player gets full party XP regardless of how many party members are present.
+                    plKillXP = (int)(KillExp * 0.66);
+                    mateKillXP = (int)(KillExp * 0.66);
+                }
+                
+                else if(eligiblePlayers.Count > 1 && eligiblePlayers.Count <= 3)
+                {
+                    //If players are between 2 and 3, we scale. At this point, the party doesn't matter, just nearby players. 
+                    if (eligiblePlayers.Count == 2)
+                    {
+                        plKillXP = (int)(KillExp * 0.90);
+                        mateKillXP = (int)(KillExp * 0.90);
+                    }
+                    else if (eligiblePlayers.Count == 3)
+                    {
+                        plKillXP = (int)(KillExp * 0.875);
+                        mateKillXP = (int)(KillExp * 0.875);
+                    }
+                }
+                else 
+                {
+                    //Player is solo, or at least only 1 player is close enough to get rights
+                    plKillXP = KillExp;
+                    mateKillXP = KillExp;
+                }
 
+                //Now we need to scale XP based on level difference, which gets a bit more complex.
+               
+
+                if (pl.Level >= this.Level + 10 || pl.Level <= this.Level - 10)
+                {
+                   //No XP for you or your pet. Will check on the +10
+                }
+                else
+                {
+                    var LevDif = 1.0;
+                    int levelDifference = pl.Level - this.Level;
+
+                    if (levelDifference > 0)
+                    {
+                        // pl.Level is above this.Level
+                        LevDif = 1.0 - (0.1 * levelDifference);
+                    }
+                    else if (levelDifference < 0)
+                    {
+                        // pl.Level is below this.Level
+                        LevDif = 1.0 + (0.1 * -levelDifference);
+                    }
+
+                    plKillXP = (int)(plKillXP * LevDif);
+                    mateKillXP = (int)(mateKillXP * LevDif);
+
+                    pl.AddExp(plKillXP, true);
+                    var mate = MateManager.Instance.GetActiveMate(pl.ObjId);
+                    if (mate != null)
+                    {
+                        mate.AddExp(mateKillXP);
+                        pl.SendMessage($"Pet gained {mateKillXP} XP");
+                    }
+                }
+
+
+
+             
+                //character.Quests.OnKill(this);
+                // инициируем событие
+                //Task.Run(() => QuestManager.Instance.DoOnMonsterHuntEvents(character, this));
+                QuestManager.Instance.DoOnMonsterHuntEvents(pl, this);
+            }
+        }
         base.DoDie(killer, killReason);
         AggroTable.Clear();
         CharacterTagging.ClearAllTaggers();
