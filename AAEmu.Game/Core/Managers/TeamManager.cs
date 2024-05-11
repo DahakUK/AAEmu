@@ -213,7 +213,9 @@ public class TeamManager : Singleton<TeamManager>
     {
         var activeTeam = GetActiveTeam(teamId);
         if (activeTeam == null) return null;
-
+       
+        //Round Robin vs FFA
+        //if(activeTeam.LootingRule==)
         foreach (var member in activeTeam.Members)
         {
             if (member?.Character == null)

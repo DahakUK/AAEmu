@@ -466,17 +466,42 @@ public class Unit : BaseUnit, IUnit
                 HashSet<Character> eligiblePlayers = new HashSet<Character>();
                 if (unit.CharacterTagging.TagTeam != 0)
                 {
-                    //A team has tagging rights
-                    var nextEligibleLooter = TeamManager.Instance.getNextEligibleLooter(unit.CharacterTagging.TagTeam, unit);
-                    if (nextEligibleLooter != null)
+                    //A team has tagging rights. TODO: Master Looter
+                    var activeTeam = TeamManager.Instance.GetActiveTeam(unit.CharacterTagging.TagTeam);
+                    if(activeTeam.LootingRule.LootMethod==0)
                     {
-                        eligiblePlayers.Add(nextEligibleLooter);
-                        Logger.Warn($"Eligible team, adding {nextEligibleLooter}");
+                        //FFA Loot
+                        foreach (var member in activeTeam.Members)
+                        {
+                            if (member != null && member.Character != null)
+                            {
+                                if (member.Character is Character tm)
+                                {
+                                    var distance = tm.Transform.World.Position - this.Transform.World.Position;
+                                    if (distance.Length() <= 200)
+                                    {
+                                        eligiblePlayers.Add(tm);
+                                    }
+                                }
+                            }
+                        }
                     }
                     else
                     {
-                        Logger.Warn("Next eligible looter was null");
+
+                        //RoundRobin, TODO: Master Looter
+                        var nextEligibleLooter = TeamManager.Instance.getNextEligibleLooter(unit.CharacterTagging.TagTeam, unit);
+                        if (nextEligibleLooter != null)
+                        {
+                            eligiblePlayers.Add(nextEligibleLooter);
+                            Logger.Warn($"Eligible team, adding {nextEligibleLooter}");
+                        }
+                        else
+                        {
+                            Logger.Warn("Next eligible looter was null");
+                        }
                     }
+                  
                 }
                 else if (unit.CharacterTagging.Tagger != null)
                 {

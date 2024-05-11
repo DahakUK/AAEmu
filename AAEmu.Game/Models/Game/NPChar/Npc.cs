@@ -774,6 +774,7 @@ public class Npc : Unit
             var team = TeamManager.Instance.GetActiveTeam(CharacterTagging.TagTeam);
             if (team != null)
             {
+
                 //Just to check the team is still a valid team.
                 foreach (var member in team.Members)
                 {
