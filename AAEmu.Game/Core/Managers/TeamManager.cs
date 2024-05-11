@@ -5,6 +5,7 @@ using AAEmu.Game.Core.Managers.Id;
 using AAEmu.Game.Core.Managers.World;
 using AAEmu.Game.Core.Packets.G2C;
 using AAEmu.Game.Models.Game;
+using AAEmu.Game.Models.Game.Units;
 using AAEmu.Game.Models.Game.Char;
 using AAEmu.Game.Models.Game.Team;
 using AAEmu.Game.Models.Game.World.Transform;
@@ -215,13 +216,13 @@ public class TeamManager : Singleton<TeamManager>
 
         foreach (var member in activeTeam.Members)
         {
-           
-
-            if (member?.Character == null || member.hasGoneRoundRobin)
+            if (member?.Character == null)
+                continue;
+            if (member.hasGoneRoundRobin)
                 continue;
             //Need to check if player is in range, and skip if not.
             var distance = member.Character.Transform.World.Position - owner.Transform.World.Position;
-            if (distance.Length() <= 200)
+            if (distance.Length() >= 200)
                 continue;
 
             member.hasGoneRoundRobin = true;

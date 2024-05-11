@@ -464,7 +464,7 @@ public class Unit : BaseUnit, IUnit
             {
                 //it's an NPC, and we have a thing for this!
                 HashSet<Character> eligiblePlayers = new HashSet<Character>();
-                if (unit.CharacterTagging.TagTeam != null&& unit.CharacterTagging.TagTeam != 0)
+                if (unit.CharacterTagging.TagTeam != 0)
                 {
                     //A team has tagging rights
                     var nextEligibleLooter = TeamManager.Instance.getNextEligibleLooter(unit.CharacterTagging.TagTeam, unit);
@@ -490,7 +490,7 @@ public class Unit : BaseUnit, IUnit
                     {
                         if (eligible != null)
                         {
-                            eligible.BroadcastPacket(new SCLootableStatePacket(ObjId, true), true);
+                            eligible.SendPacket(new SCLootableStatePacket(ObjId, true));
                         }
                         else
                         {

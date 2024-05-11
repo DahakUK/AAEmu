@@ -768,7 +768,7 @@ public class Npc : Unit
     {
 
         HashSet<Character> eligiblePlayers = new HashSet<Character>();
-        if (CharacterTagging.TagTeam != null&& CharacterTagging.TagTeam != 0)
+        if (CharacterTagging.TagTeam != 0)
         {
             //A team has tagging rights
             var team = TeamManager.Instance.GetActiveTeam(CharacterTagging.TagTeam);
@@ -857,10 +857,11 @@ public class Npc : Unit
 
 
 
-
+        var xpDiv = eligiblePlayers.Count;
+        var plkillExp = KillExp / xpDiv;
         foreach (Character pl in eligiblePlayers)
         {
-            pl.AddExp(KillExp, true);
+            pl.AddExp(plkillExp, true);
             var mate = MateManager.Instance.GetActiveMate(pl.ObjId);
             if (mate != null)
             {
