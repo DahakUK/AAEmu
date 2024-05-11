@@ -180,7 +180,7 @@ public class ItemManager : Singleton<ItemManager>
         // Check all people with with a claim on the NPC
 
         HashSet<Character> eligiblePlayers = new HashSet<Character>();
-        if (unit.CharacterTagging.TagTeam != null && unit.CharacterTagging.TagTeam != 0)
+        if ( unit.CharacterTagging.TagTeam != 0)
         {
            
                 //A team has tagging rights

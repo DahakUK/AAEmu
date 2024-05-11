@@ -805,8 +805,8 @@ public class Npc : Unit
 
 
 
+        Logger.Warn($"Eligible killers count is {eligiblePlayers.Count }");
 
-      
         if (eligiblePlayers.Count == 0 && killer is Character characterKiller)
         {
             QuestManager.Instance.DoOnMonsterHuntEvents(characterKiller, this);//No eligible owner, but the killer is a character.
@@ -903,9 +903,9 @@ public class Npc : Unit
                         // pl.Level is below this.Level
                         LevDif = 1.0f + (0.1f * -levelDifference);
                     }
-
-                    plKillXP = (int)((plKillXP * plMod) * LevDif);
-                    mateKillXP = (int)((mateKillXP * mateMod) * LevDif);
+                    
+                    plKillXP = (int)((KillExp * plMod) * LevDif);
+                    mateKillXP = (int)((KillExp * mateMod) * LevDif);
 
                     pl.AddExp(plKillXP, true);
                     var mate = MateManager.Instance.GetActiveMate(pl.ObjId);
