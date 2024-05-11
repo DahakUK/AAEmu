@@ -843,18 +843,21 @@ public class Npc : Unit
             {
                 int plKillXP = 0;
                 int mateKillXP = 0;
-               
-                if(isRaid)
+                float plMod = 1f;
+                float mateMod = 1f;
+
+
+                if (isRaid)
                 {
                     //Player is in a raid. 1.2, pet XP is capped a full team value, but player gets raid XP regardless of how many raiders are present.
-                    plKillXP = (int)(KillExp * 0.33);
-                    mateKillXP = (int)(KillExp * 0.66);
+                   plMod =  0.33f;
+                   mateMod = 0.66f;
                 }
                 else if (isFullTeam)
                 {
                     //Player is in a team of more than 3 people. Player gets full party XP regardless of how many party members are present.
-                    plKillXP = (int)(KillExp * 0.66);
-                    mateKillXP = (int)(KillExp * 0.66);
+                    plMod = 0.66f;
+                    mateMod = 0.66f;
                 }
                 
                 else if(eligiblePlayers.Count > 1 && eligiblePlayers.Count <= 3)
@@ -862,20 +865,20 @@ public class Npc : Unit
                     //If players are between 2 and 3, we scale. At this point, the party doesn't matter, just nearby players. 
                     if (eligiblePlayers.Count == 2)
                     {
-                        plKillXP = (int)(KillExp * 0.90);
-                        mateKillXP = (int)(KillExp * 0.90);
+                        plMod = 0.90f;
+                        mateMod = 0.90f;
                     }
                     else if (eligiblePlayers.Count == 3)
                     {
-                        plKillXP = (int)(KillExp * 0.875);
-                        mateKillXP = (int)(KillExp * 0.875);
+                        plMod = 0.875f;
+                        mateMod = 0.875f;
                     }
                 }
                 else 
                 {
                     //Player is solo, or at least only 1 player is close enough to get rights
-                    plKillXP = KillExp;
-                    mateKillXP = KillExp;
+                    plMod = 1f;
+                    mateMod = 1f;
                 }
 
                 //Now we need to scale XP based on level difference, which gets a bit more complex.
@@ -887,22 +890,22 @@ public class Npc : Unit
                 }
                 else
                 {
-                    var LevDif = 1.0;
+                    float LevDif = 1.0f;
                     int levelDifference = pl.Level - this.Level;
 
                     if (levelDifference > 0)
                     {
                         // pl.Level is above this.Level
-                        LevDif = 1.0 - (0.1 * levelDifference);
+                        LevDif = 1.0f - (0.1f * levelDifference);
                     }
                     else if (levelDifference < 0)
                     {
                         // pl.Level is below this.Level
-                        LevDif = 1.0 + (0.1 * -levelDifference);
+                        LevDif = 1.0f + (0.1f * -levelDifference);
                     }
 
-                    plKillXP = (int)(plKillXP * LevDif);
-                    mateKillXP = (int)(mateKillXP * LevDif);
+                    plKillXP = (int)((plKillXP * plMod) * LevDif);
+                    mateKillXP = (int)((mateKillXP * mateMod) * LevDif);
 
                     pl.AddExp(plKillXP, true);
                     var mate = MateManager.Instance.GetActiveMate(pl.ObjId);
