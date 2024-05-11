@@ -61,7 +61,7 @@ public class ItemManager : Singleton<ItemManager>
     private Dictionary<uint, List<LootPackDroppingNpc>> _lootPackDroppingNpc;
     private Dictionary<uint, List<LootPackConvertFish>> _lootPackConvertFish;
     private Dictionary<int, GradeDistributions> _itemGradeDistributions;
-    private Dictionary<uint, List<Item>> _lootDropItems;
+    private Dictionary<uint, List<LootInstance>> _lootDropItems;
 
     // ItemLookConvert
     private Dictionary<uint, ItemLookConvert> _itemLookConverts;
@@ -139,7 +139,7 @@ public class ItemManager : Singleton<ItemManager>
         return _lootPackConvertFish.TryGetValue(ItemId, out var value) ? value : new List<LootPackConvertFish>();
     }
 
-    public List<Item> GetLootDropItems(uint npcId)
+    public List<LootInstance> GetLootDropItems(uint npcId)
     {
         return _lootDropItems.TryGetValue(npcId, out var item) ? item : new List<Item>();
     }
