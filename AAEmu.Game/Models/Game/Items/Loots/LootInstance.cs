@@ -4,6 +4,9 @@ using System.Data;
 using System.Linq;
 using AAEmu.Game.Models.Game.Items;
 
+namespace AAEmu.Game.Models.Game.Items.Loots;
+
+
 public class LootInstance
 {
     // Dictionary mapping each player to their respective loot
@@ -19,6 +22,17 @@ public class LootInstance
     {
         _playerLootItems[playerId] = items;
     }
+    //Methoid to get all loot items 
+    public List<Item> GetAllItems()
+    {
+        List<Item> allItems = new List<Item>();
+        foreach (var playerItems in _playerLootItems.Values)
+        {
+            allItems.AddRange(playerItems);
+        }
+        return allItems;
+    }
+
 
     // Method to get loot for a player
     public List<Item> GetLoot(uint playerId)

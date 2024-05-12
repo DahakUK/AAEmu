@@ -139,9 +139,17 @@ public class ItemManager : Singleton<ItemManager>
         return _lootPackConvertFish.TryGetValue(ItemId, out var value) ? value : new List<LootPackConvertFish>();
     }
 
-    public List<LootInstance> GetLootDropItems(uint npcId)
+    public List<Item> GetLootDropItems(uint npcId)
     {
-        return _lootDropItems.TryGetValue(npcId, out var item) ? item : new List<Item>();
+        List<Item> allItems = new List<Item>();
+        if (_lootDropItems.TryGetValue(npcId, out var lootInstances))
+        {
+            foreach (var lootInstance in lootInstances)
+            {
+                allItems.AddRange(lootInstance.GetAllItems());
+            }
+        }
+        return allItems;
     }
 
     public List<ItemTemplate> GetAllItems()
@@ -256,14 +264,15 @@ public class ItemManager : Singleton<ItemManager>
             var lootPack = LootGameData.Instance.GetPack(lootPackDropping.LootPackId);
             if (lootPack == null)
                 continue;
-            items = lootPack.GenerateNpcPackItems(ref baseId, lootDropRate, lootGoldRate);
-            if (_lootDropItems.ContainsKey(npcId))
-                _lootDropItems[npcId].AddRange(items);
-            else
-                _lootDropItems.Add(npcId, items);
+           // items = lootPack.GenerateNpcPackItems(ref baseId, lootDropRate, lootGoldRate);
+           // if (_lootDropItems.ContainsKey(npcId))
+              //  _lootDropItems[npcId].AddRange(items);
+          //  else
+            //    _lootDropItems.Add(npcId, items);
+            //We need to re-write this for the actual instanced loot generation.
         }
 
-        if (!_lootDropItems.TryGetValue(npcId, out items))
+      //  if (!_lootDropItems.TryGetValue(npcId, out items))
             items = new List<Item>();
         return items;
     }
@@ -643,7 +652,7 @@ public class ItemManager : Singleton<ItemManager>
         _lootPacks = new Dictionary<uint, List<Loot>>();
         _lootGroups = new Dictionary<uint, List<LootGroups>>();
         */
-        _lootDropItems = new Dictionary<uint, List<Item>>();
+        _lootDropItems = new Dictionary<uint, List<LootInstance>>();
         _itemDoodadTemplates = new Dictionary<uint, ItemDoodadTemplate>();
         _itemProcTemplates = new Dictionary<uint, ItemProcTemplate>();
         _armorGradeBuffs = new Dictionary<ArmorType, Dictionary<ItemGrade, ArmorGradeBuff>>();
