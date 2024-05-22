@@ -286,6 +286,24 @@ public class Npc : Unit
                 else
                     res += bonus.Value;
             }
+            //Mongbatica
+            if (Ai.Owner.Buffs.CheckBuffs(2100))
+            {
+
+                int tempHp = (int)(Hp/res);
+                //Dominator's authority
+                int nearby = AggroTable.Count;
+                int tempMaxHp = (int)(res / 40);
+                tempHp = (int)(tempHp / 40);
+                res = tempMaxHp * nearby;
+                Hp = (int)(Hp * res);
+
+
+            }
+
+
+
+
             return res;
         }
     }

@@ -257,7 +257,7 @@ public class BoatPhysicsManager//: Singleton<BoatPhysicsManager>
             var damage = _random.Next(500, 750); // damage randomly 500-750
             if (damage > 0)
             {
-                slave.DoFloorCollisionDamage(damage, false, KillReason.Collide);
+                slave.DoFloorCollisionDamage((int)(damage/100), false, KillReason.Collide);//Mongbatica. Hull damage is excessive
             }
 
             Logger.Debug($"Slave: {slave.ObjId}, speed: {slave.Speed}, rotSpeed: {slave.RotSpeed}, floor: {floor}, Z: {slave.Transform.World.Position.Z}, damage: {damage}");
