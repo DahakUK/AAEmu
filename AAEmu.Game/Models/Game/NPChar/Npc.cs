@@ -287,7 +287,7 @@ public class Npc : Unit
                     res += bonus.Value;
             }
             //Mongbatica
-            if (Ai.Owner.Buffs.CheckBuffs(2100))
+            if (Ai.Owner.Buffs.CheckBuffs((uint)2100))
             {
 
                 int tempHp = (int)(Hp/res);
