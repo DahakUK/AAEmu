@@ -576,7 +576,8 @@ public partial class CharacterQuests
         // TODO: Put Server timezone offset in configuration file, currently using local machine midnight
         // var utcDelta = DateTime.Now - DateTime.UtcNow;
         // var isOld = (DateTime.Today + utcDelta - Owner.LeaveTime.Date) >= TimeSpan.FromDays(1);
-        var isOld = (DateTime.Today - Owner.LeaveTime.Date) >= TimeSpan.FromDays(1);
+        DateTime localLeaveTime = Owner.LeaveTime.ToLocalTime();
+        var isOld = (DateTime.Today - localLeaveTime.Date) >= TimeSpan.FromDays(1);
         if (isOld)
             ResetDailyQuests(false);
     }
