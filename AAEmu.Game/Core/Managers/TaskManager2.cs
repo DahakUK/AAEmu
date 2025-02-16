@@ -158,8 +158,8 @@ public class TaskManager : Singleton<TaskManager>, ITaskManager
         {
             if (predicate(kvp.Value))
             {
-                if (_queue.TryRemove(kvp))
-                    ReleaseId(kvp.Key);
+                _queue.Remove(kvp.Key, out _);
+                ReleaseId(kvp.Key);
             }
         }
     }
