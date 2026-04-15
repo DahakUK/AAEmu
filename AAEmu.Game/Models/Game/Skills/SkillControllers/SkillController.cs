@@ -49,7 +49,7 @@ public class SkillController
         {
             case SkillControllerKind.Floating:
                 Logger.Trace($"SkillController: create FloatingSkillController");
-                return null; // TODO: Add Floating (telekinesis, bubble ?)
+                return new FloatingSkillController(template, owner, target) { State = SCState.Created };
             case SkillControllerKind.Wandering:
                 Logger.Trace($"SkillController: create WanderingSkillController");
                 return null;// TODO: Add Wandering (Fear ?)

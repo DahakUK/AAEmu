@@ -1,7 +1,9 @@
 ﻿using System.Diagnostics;
 using AAEmu.Game.Core.Packets;
 using AAEmu.Game.Core.Packets.G2C;
+using AAEmu.Game.Models.Game.Skills.Plots.Type;
 using AAEmu.Game.Models.Game.Skills.Static;
+using AAEmu.Game.Models.Game.Units;
 
 using NLog;
 
@@ -80,11 +82,29 @@ public class PlotNode
             var skill = state.ActiveSkill;
             var unkId = (ParentNextEvent?.Casting ?? false) || (ParentNextEvent?.Channeling ?? false) ? state.Caster.ObjId : 0;
 
+            // For SkillController effects the per-effect SourceId governs which unit
+            // performs the movement. The event-level targetInfo.Source (always the original
+            // skill caster) would incorrectly assign the controller to the caster instead of
+            // the intended target (e.g. making the player jump instead of the fish).
+            BaseUnit effectiveCasterUnit = targetInfo.Source;
+            var scEffect = Event.Effects.FirstOrDefault(e => e.ActualType == "SkillController");
+            if (scEffect != null)
+            {
+                effectiveCasterUnit = scEffect.SourceId switch
+                {
+                    PlotEffectSource.OriginalSource => state.Caster,
+                    PlotEffectSource.OriginalTarget => state.Target,
+                    PlotEffectSource.Source         => targetInfo.Source,
+                    PlotEffectSource.Target         => targetInfo.Target,
+                    _                               => targetInfo.Source
+                };
+            }
+
             PlotObject casterPlotObj;
-            if (targetInfo.Source.ObjId == uint.MaxValue)
-                casterPlotObj = new PlotObject(targetInfo.Source.Transform);
+            if (effectiveCasterUnit.ObjId == uint.MaxValue)
+                casterPlotObj = new PlotObject(effectiveCasterUnit.Transform);
             else
-                casterPlotObj = new PlotObject(targetInfo.Source);
+                casterPlotObj = new PlotObject(effectiveCasterUnit);
 
             PlotObject targetPlotObj;
             if (targetInfo.Target.ObjId == uint.MaxValue)
